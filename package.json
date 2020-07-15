@@ -1,0 +1,26 @@
+{
+  "name": "pana-miguel",
+  "version": "1.0.0",
+  "description": "help",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Bell",
+  "license": "ISC",
+  "dependencies": {
+    "@discordjs/opus": "^0.3.2",
+    "bufferutil": "^4.0.1",
+    "canvas": "^2.6.1",
+    "discord.js": "^12.2.0",
+    "erlpack": "github:discordapp/erlpack",
+    "eslint": "^7.1.0",
+    "ffmpeg-static": "^4.2.2",
+    "fluent-ffmpeg": "^2.1.2",
+    "nodemon": "^2.0.4",
+    "querystring": "^0.2.0",
+    "r2": "^2.0.1",
+    "utf-8-validate": "^5.0.2",
+    "ytdl-core": "^3.1.1"
+  }
+}
