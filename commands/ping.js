@@ -1,7 +1,7 @@
 module.exports = {
-    name: 'ping',
-    cooldown: 6,
-    execute(message) {
-        message.reply('pong');
-    },
+	name: 'ping',
+	cooldown: 6,
+	execute(message) {
+		message.reply('pong');
+	},
 };
