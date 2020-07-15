@@ -12,9 +12,7 @@ module.exports = {
 		};
 
 		const query_params = {
-			'has_breeds':false,
 			'mime_types': args[0] === 'gif' ? 'gif' : 'jpg,png',
-			'sub_id': 'pana',
 			'limit' : 1,
 		};
 
