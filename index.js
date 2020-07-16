@@ -1,6 +1,5 @@
 const fs = require('fs');
 const Discord = require('discord.js');
-// const ytdl = require('ytdl-core');
 const { prefix, token } = require('./config.json');
 
 const client = new Discord.Client();
@@ -8,6 +7,8 @@ const client = new Discord.Client();
 client.commands = new Discord.Collection();
 
 const cooldowns = new Discord.Collection();
+
+const queue = new Map();
 
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
@@ -36,19 +37,14 @@ client.on('message', async message => {
 
 	const now = Date.now();
 	const timestamps = cooldowns.get(command.name);
-	const cooldownAmount = (command.cooldown || 3) * 1000;
+	const cooldownAmount = (command.cooldown || 1) * 1000;
 
 	if (timestamps.has(message.author.id)) {
 		const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
 
 		if (now < expirationTime) {
 			const timeLeft = (expirationTime - now) / 1000;
-			if (command.name === 'mew') {
-				return message.channel.send('>:3c');
-			}
-			else {
-				return message.reply(`please wait ${timeLeft.toFixed(1)} more second(s) before reusing the \`${command.name}\` command. `);
-			}
+			return message.reply(`please wait ${timeLeft.toFixed(1)} more second(s) before reusing the \`${command.name}\` command. `);
 		}
 	}
 
@@ -64,7 +60,7 @@ client.on('message', async message => {
 	}
 
 	try {
-		command.execute(message, args);
+		command.execute(message, args, queue);
 	}
 	catch (error) {
 		console.error(error);

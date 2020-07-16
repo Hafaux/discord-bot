@@ -1,18 +1,6 @@
 const { registerFont, createCanvas, loadImage } = require('canvas');
 const { MessageAttachment } = require('discord.js');
 
-function applyText(canvas, text) {
-	const ctx = canvas.getContext('2d');
-	let fontsize = 62;
-
-	do {
-		ctx.font = `${fontsize -= 10}px "Schoolbell"`;
-
-	} while (ctx.measureText(text).width > canvas.width - 80);
-
-	return ctx.font;
-}
-
 module.exports = {
 	name: 'tissue',
 	args: true,
@@ -35,3 +23,15 @@ module.exports = {
 		message.channel.send(attachment);
 	},
 };
+
+function applyText(canvas, text) {
+	const ctx = canvas.getContext('2d');
+	let fontsize = 62;
+
+	do {
+		ctx.font = `${fontsize -= 10}px "Schoolbell"`;
+
+	} while (ctx.measureText(text).width > canvas.width - 80);
+
+	return ctx.font;
+}
