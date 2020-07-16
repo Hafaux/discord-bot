@@ -1,5 +1,7 @@
 const YouTube = require('discord-youtube-api');
 
+const { MessageEmbed } = require('discord.js');
+
 const { googleAPIkey } = require('../config.json');
 
 const youtube = new YouTube(googleAPIkey);
@@ -53,8 +55,9 @@ async function play(message, serverQueue, queue, video) {
 	const song = {
 		title: songInfo.videoDetails.title,
 		url: songInfo.videoDetails.video_url,
+		thumbnail: video.thumbnail,
+		length: video.length,
 	};
-
 	if (!serverQueue) {
 		const queueContruct = {
 			textChannel: message.channel,
@@ -103,7 +106,14 @@ function playSong(guild, song, queue) {
 		})
 		.on('error', error => console.error(error));
 	dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
-	serverQueue.textChannel.send(`Playing: **${song.title}**`);
+
+	const embed = new MessageEmbed()
+		.setTitle(song.title)
+		.setURL(song.url)
+		.setDescription(`length - ${song.length}`)
+		.setThumbnail(song.thumbnail);
+
+	serverQueue.textChannel.send(embed);
 }
 
 function skip(message, serverQueue) {
