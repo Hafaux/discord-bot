@@ -44,10 +44,10 @@ client.on('message', async message => {
 		if (now < expirationTime) {
 			const timeLeft = (expirationTime - now) / 1000;
 			if (command.name === 'mew') {
-				return message.reply('>:3c');
+				return message.channel.send('>:3c');
 			}
 			else {
-				return message.reply(`Please wait ${timeLeft.toFixed(1)} more second(s) before reusing the \`${command.name}\` command. `);
+				return message.reply(`please wait ${timeLeft.toFixed(1)} more second(s) before reusing the \`${command.name}\` command. `);
 			}
 		}
 	}
