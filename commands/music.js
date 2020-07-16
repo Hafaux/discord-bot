@@ -45,7 +45,7 @@ async function play(message, serverQueue, queue, video) {
 	const permissions = voiceChannel.permissionsFor(message.client.user);
 	if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
 		return message.channel.send(
-			'I need the permissions to join and speak in your voice channel.',
+			'how do i unmute?',
 		);
 	}
 
@@ -99,7 +99,7 @@ function playSong(guild, song, queue) {
 		.play(ytdl(song.url))
 		.on('finish', () => {
 			serverQueue.songs.shift();
-			playSong(guild, serverQueue.songs[0]);
+			playSong(guild, serverQueue.songs[0], queue);
 		})
 		.on('error', error => console.error(error));
 	dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
@@ -109,17 +109,19 @@ function playSong(guild, song, queue) {
 function skip(message, serverQueue) {
 	if (!message.member.voice.channel) {
 		return message.channel.send(
-			'You have to be in a voice channel to stop the music!',
+			'You have to be in a voice channel to skip the current song.',
 		);
 	}
-	if (!serverQueue) {return message.channel.send('There is no song that I could skip!');}
+	if (!serverQueue) {
+		return message.channel.send('No song to skip.');
+	}
 	serverQueue.connection.dispatcher.end();
 }
 
 function stop(message, serverQueue) {
 	if (!message.member.voice.channel) {
 		return message.channel.send(
-			'You have to be in a voice channel to stop the music!',
+			'You have to be in a voice channel to stop the music.',
 		);
 	}
 	serverQueue.songs = [];
