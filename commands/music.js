@@ -6,7 +6,7 @@ const { googleAPIkey } = require('../config.json');
 
 const youtube = new YouTube(googleAPIkey);
 
-const ytdl = require('ytdl-core');
+const ytdl = require('ytdl-core-discord');
 
 module.exports = {
 	name: 'song',
@@ -51,10 +51,10 @@ async function play(message, serverQueue, queue, video) {
 		);
 	}
 
-	const songInfo = await ytdl.getInfo(video.id);
+	// const songInfo = await ytdl.getInfo(video.id);
 	const song = {
-		title: songInfo.videoDetails.title,
-		url: songInfo.videoDetails.video_url,
+		title: video.title,
+		url: `https://www.youtube.com/watch?v=${video.id}`,
 		thumbnail: video.thumbnail,
 		length: video.length,
 	};
@@ -89,7 +89,7 @@ async function play(message, serverQueue, queue, video) {
 	}
 }
 
-function playSong(guild, song, queue) {
+async function playSong(guild, song, queue) {
 	const serverQueue = queue.get(guild.id);
 
 	if (!song) {
@@ -99,7 +99,7 @@ function playSong(guild, song, queue) {
 	}
 
 	const dispatcher = serverQueue.connection
-		.play(ytdl(song.url))
+		.play(await ytdl(song.url), { type: 'opus' })
 		.on('finish', () => {
 			serverQueue.songs.shift();
 			playSong(guild, serverQueue.songs[0], queue);
