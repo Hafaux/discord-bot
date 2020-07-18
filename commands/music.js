@@ -1,26 +1,22 @@
-const YouTube = require('discord-youtube-api');
-
 const { MessageEmbed } = require('discord.js');
 
-const { googleAPIkey } = require('../config.json');
-
-const youtube = new YouTube(googleAPIkey);
-
 const ytdl = require('ytdl-core-discord');
+
+const yts = require('yt-search');
 
 module.exports = {
 	name: 'song',
 	description: 'Play music from YouTube.',
 	args: true,
-	usage: 'play [song name] | skip | stop | queue',
+	usage: 'play [song name] | skip | stop | queue | remove',
 	aliases: ['music', 'youtube'],
 	async execute(message, args, queue) {
 		const serverQueue = queue.get(message.guild.id);
 		const command = args.shift();
-		const video = await youtube.searchVideos(args.join(' '));
+
 		switch (command) {
 		case 'play':
-			play(message, serverQueue, queue, video);
+			play(message, serverQueue, queue, args.join(' '));
 			break;
 		case 'skip':
 			skip(message, serverQueue);
@@ -31,11 +27,13 @@ module.exports = {
 		case 'queue':
 			listQueuedSongs(message, serverQueue);
 			break;
+		case 'remove':
+			removeSong(message, serverQueue, args);
 		}
 	},
 };
 
-async function play(message, serverQueue, queue, video) {
+async function play(message, serverQueue, queue, songQuery) {
 	const voiceChannel = message.member.voice.channel;
 
 	if (!voiceChannel) {
@@ -44,20 +42,33 @@ async function play(message, serverQueue, queue, video) {
 		);
 	}
 
-	const permissions = voiceChannel.permissionsFor(message.client.user);
-	if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
+	if (!songQuery) {
 		return message.channel.send(
-			'how do i unmute?',
+			'what song tho',
 		);
 	}
 
+	const permissions = voiceChannel.permissionsFor(message.client.user);
+	if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
+		return message.channel.send(
+			'Permission denied.',
+		);
+	}
+
+	const queryResolve = await yts(songQuery);
+	const video = queryResolve.videos[0];
 	// const songInfo = await ytdl.getInfo(video.id);
 	const song = {
 		title: video.title,
-		url: `https://www.youtube.com/watch?v=${video.id}`,
-		thumbnail: video.thumbnail,
-		length: video.length,
+		url: video.url,
+		thumbnail: video.image,
+		length: video.timestamp,
+		seconds: video.seconds,
+		author: video.author.name,
+		requester: message.author.username,
+		requesterAvatar: message.author.displayAvatarURL({ format: 'png' }),
 	};
+
 	if (!serverQueue) {
 		const queueContruct = {
 			textChannel: message.channel,
@@ -84,8 +95,27 @@ async function play(message, serverQueue, queue, video) {
 		}
 	}
 	else {
+		let durationLeft = 0;
+
+		serverQueue.songs.forEach(s => {
+			durationLeft += s.seconds;
+		});
+
 		serverQueue.songs.push(song);
-		return message.channel.send(`**${song.title}** has been added to the queue.`);
+
+		const embed = new MessageEmbed()
+			.setColor('#AF12B8')
+			.setAuthor('Added to Queue', song.requesterAvatar)
+			.setTitle(song.title)
+			.setURL(song.url)
+			.addFields(
+				{ name: 'Duration', value: song.length, inline: true },
+				{ name: 'Estimated time until playing', value: timeFormat(durationLeft), inline: true },
+				{ name: 'Position in queue', value: serverQueue.songs.length - 1 },
+			)
+			.setThumbnail(song.thumbnail);
+
+		return message.channel.send(embed);
 	}
 }
 
@@ -98,19 +128,42 @@ async function playSong(guild, song, queue) {
 		return;
 	}
 
+	let durationInterval = null;
 	const dispatcher = serverQueue.connection
-		.play(await ytdl(song.url), { type: 'opus' })
+		.play(await ytdl(song.url, {
+			filter: 'audioonly',
+			highWaterMark: 1 << 25,
+		}), { type: 'opus' })
 		.on('finish', () => {
+			clearInterval(durationInterval);
 			serverQueue.songs.shift();
 			playSong(guild, serverQueue.songs[0], queue);
 		})
-		.on('error', error => console.error(error));
+		.on('error', error => {
+			clearInterval(durationInterval);
+			console.error(error);
+		});
 	dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
 
+	durationInterval = setInterval(() => {
+		if (song.seconds <= 0) {
+			clearInterval(durationInterval);
+		}
+		else {
+			song.seconds -= 1;
+		}
+	}, 1000);
+
 	const embed = new MessageEmbed()
+		.setColor('#FF0000')
+		.setAuthor('Now Playing', song.requesterAvatar)
 		.setTitle(song.title)
 		.setURL(song.url)
-		.setDescription(`length - ${song.length}`)
+		.addFields(
+			{ name: 'Duration', value: song.length, inline: true },
+			{ name: '\u200B', value: '\u200B', inline: true },
+			{ name: 'Channel', value: song.author, inline: true },
+		)
 		.setThumbnail(song.thumbnail);
 
 	serverQueue.textChannel.send(embed);
@@ -140,13 +193,76 @@ function stop(message, serverQueue) {
 
 function listQueuedSongs(message, serverQueue) {
 	if (serverQueue && serverQueue.songs) {
-		console.log(serverQueue.songs);
-		let data = '';
 
+		let songsString = '';
+		let totalDuration = 0;
 		serverQueue.songs.forEach((song, index) => {
-			data += `${index + 1} - **${song.title}**\n`;
+			totalDuration += song.seconds;
+			if (index === 0 || index > 10) return;
+			songsString += `**${index}.** [${song.title}](${song.url}) - Requested by:\`${song.requester}\`\n`;
 		});
 
-		message.channel.send(data);
+		const durationString = timeFormat(totalDuration);
+
+		const embed = new MessageEmbed()
+			.setColor('#0099ff')
+			.setTitle(`Queue for ${serverQueue.voiceChannel.name}`)
+			.addField('**Now Playing:**', `[${serverQueue.songs[0].title}](${serverQueue.songs[0].url}) - Requested by: \`${serverQueue.songs[0].requester}\``)
+			.setFooter(`Total duration: ${durationString}`);
+		if (songsString) embed.addField('**Up Next:**', songsString);
+
+		// let data = 'Now playing';
+
+		// serverQueue.songs.forEach((song, index) => {
+		// 	data += index ? index : '';
+		// 	data += ` - **${song.title}**\n`;
+		// });
+
+		message.channel.send(embed);
+	}
+}
+
+function timeFormat(duration) {
+	const hrs = ~~(duration / 3600);
+	const mins = ~~((duration % 3600) / 60);
+	const secs = ~~duration % 60;
+
+	let ret = '';
+
+	if (hrs > 0) {
+		ret += '' + hrs + ':' + (mins < 10 ? '0' : '');
+	}
+
+	ret += '' + mins + ':' + (secs < 10 ? '0' : '');
+	ret += '' + secs;
+	return ret;
+}
+
+function removeSong(message, serverQueue, args) {
+	if (!message.member.voice.channel) {
+		return message.channel.send(
+			'You have to be in a voice channel to remove a song from the queue.',
+		);
+	}
+
+	if (serverQueue && serverQueue.songs) {
+		const index = parseInt(args);
+
+		if (isNaN(index) || index <= 0 || index > serverQueue.songs.length) {
+			return message.channel.send(
+				'Enter a valid song number to remove.',
+			);
+		}
+		else {
+			const removedSong = serverQueue.songs.splice(index, 1);
+			return message.channel.send(
+				`Removed **${removedSong.title}**`,
+			);
+		}
+	}
+	else {
+		return message.channel.send(
+			'No songs to remove.',
+		);
 	}
 }
