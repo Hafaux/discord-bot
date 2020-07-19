@@ -29,9 +29,8 @@ function applyText(canvas, text) {
 	let fontsize = 62;
 
 	do {
-		ctx.font = `${fontsize -= 10}px "Schoolbell"`;
-
-	} while (ctx.measureText(text).width > canvas.width - 80);
+		ctx.font = `${fontsize -= 4}px "Schoolbell"`;
+	} while (ctx.measureText(text).width > canvas.width - 80 && fontsize > 14);
 
 	return ctx.font;
 }

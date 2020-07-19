@@ -2,3 +2,5 @@ config.json
 old_commands
 node_modules
 ssh
+reddit_config.json
+.gitignore

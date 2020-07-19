@@ -29,6 +29,7 @@ module.exports = {
 			break;
 		case 'remove':
 			removeSong(message, serverQueue, args);
+			break;
 		}
 	},
 };
@@ -199,7 +200,7 @@ function listQueuedSongs(message, serverQueue) {
 		serverQueue.songs.forEach((song, index) => {
 			totalDuration += song.seconds;
 			if (index === 0 || index > 10) return;
-			songsString += `**${index}.** [${song.title}](${song.url}) - Requested by:\`${song.requester}\`\n`;
+			songsString += `**${index}.** [${song.title}](${song.url}) - Requested by: \`${song.requester}\`\n`;
 		});
 
 		const durationString = timeFormat(totalDuration);
