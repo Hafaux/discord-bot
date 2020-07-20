@@ -70,9 +70,11 @@ async function play(message, serverQueue, songQuery) {
 	const song = {
 		title: video.title,
 		url: video.url,
+		description: video.description,
 		thumbnail: video.image,
-		length: video.timestamp,
-		seconds: video.seconds,
+		durationInterval: null,
+		length: video.seconds,
+		currentTime: 0,
 		author: video.author.name,
 		requester: message.author.username,
 		requesterAvatar: message.author.displayAvatarURL({ format: 'png' }),
@@ -107,7 +109,7 @@ async function play(message, serverQueue, songQuery) {
 		let durationLeft = 0;
 
 		serverQueue.songs.forEach(s => {
-			durationLeft += s.seconds;
+			durationLeft += (s.length - s.currentTime);
 		});
 
 		serverQueue.songs.push(song);
@@ -118,7 +120,7 @@ async function play(message, serverQueue, songQuery) {
 			.setTitle(song.title)
 			.setURL(song.url)
 			.addFields(
-				{ name: 'Duration', value: song.length, inline: true },
+				{ name: 'Duration', value: formatTime(song.length), inline: true },
 				{ name: 'Estimated time until playing', value: formatTime(durationLeft), inline: true },
 				{ name: 'Position in queue', value: serverQueue.songs.length - 1 },
 			)
@@ -128,7 +130,7 @@ async function play(message, serverQueue, songQuery) {
 	}
 }
 
-async function playSong(guild, song) {
+async function playSong(guild, song, songStart = '0s') {
 	const serverQueue = queue.get(guild.id);
 
 	if (!song) {
@@ -137,29 +139,30 @@ async function playSong(guild, song) {
 		return;
 	}
 
-	let durationInterval = null;
 	const dispatcher = serverQueue.connection
 		.play(await ytdl(song.url, {
 			filter: 'audioonly',
 			highWaterMark: 1 << 25,
+			begin: songStart
 		}), { type: 'opus' })
 		.on('finish', () => {
-			clearInterval(durationInterval);
+			// if (!song.durationInterval) return
+			clearInterval(song.durationInterval);
 			serverQueue.songs.shift();
 			playSong(guild, serverQueue.songs[0], queue);
 		})
 		.on('error', error => {
-			clearInterval(durationInterval);
+			clearInterval(song.durationInterval);
 			console.error(error);
 		});
 	dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
 
-	durationInterval = setInterval(() => {
-		if (song.seconds <= 0) {
-			clearInterval(durationInterval);
+	song.durationInterval = setInterval(() => {
+		if (song.currentTime >= song.length) {
+			clearInterval(song.durationInterval);
 		}
 		else {
-			song.seconds -= 1;
+			song.currentTime += 1;
 		}
 	}, 1000);
 
@@ -169,7 +172,7 @@ async function playSong(guild, song) {
 		.setTitle(song.title)
 		.setURL(song.url)
 		.addFields(
-			{ name: 'Duration', value: song.length, inline: true },
+			{ name: 'Duration', value: formatTime(song.length), inline: true },
 			{ name: 'Channel', value: song.author, inline: true },
 		)
 		.setThumbnail(song.thumbnail);
@@ -205,7 +208,7 @@ function listQueuedSongs(message, serverQueue) {
 		let songsString = '';
 		let totalDuration = 0;
 		serverQueue.songs.forEach((song, index) => {
-			totalDuration += song.seconds;
+			totalDuration += song.length;
 			if (index === 0 || index > 10) return;
 			songsString += `**${index}.** [${song.title}](${song.url}) - Requested by: \`${song.requester}\`\n`;
 		});
@@ -275,13 +278,16 @@ function nowPlaying(message, serverQueue) {
 	}
 
 	const song = serverQueue.songs[0];
+	let timeline = timelineASCII(song);
+
 	const embed = new MessageEmbed()
 		.setColor('#29B464')
 		.setAuthor('Now Playing', song.requesterAvatar)
 		.setTitle(song.title)
 		.setURL(song.url)
+		.setDescription(song.description)
 		.addFields(
-			{ name: 'Time', value: `${formatTime(song.seconds)} / ${song.length}`, inline: true },
+			{ name: '\u200B', value: timeline, inline: true },
 			{ name: 'Channel', value: `${song.author}`, inline: true },
 		)
 		.setFooter(`Requested by: ${song.requester}`, song.requesterAvatar)
@@ -289,3 +295,31 @@ function nowPlaying(message, serverQueue) {
 
 	message.channel.send(embed);
 }
+
+function timelineASCII(song) {
+	let timeline = '────────────────────';
+	const timeRatio = ~~(song.currentTime * timeline.length / song.length);
+	timeline = timeline.substr(0, timeRatio) + '|' + timeline.substr(timeRatio + 1);
+	return `${formatTime(song.currentTime)} ${timeline} ${formatTime(song.length)}`;
+}
+
+// eww
+// function pauseSong(message, serverQueue) {
+// 	const song = serverQueue.songs[0];
+// 	clearInterval(song.durationInterval);
+// 	serverQueue.connection.dispatcher.end();
+// 	message.channel.send(`⏸ Paused`)
+// }
+
+// function unpause(message, serverQueue) {
+// 	const song = serverQueue.songs[0];
+// 	playSong(message.guild, song, formatTime(song.length - song.timeRemaining));
+// 	song.durationInterval = setInterval(() => {
+// 		if (song.timeRemaining <= 0) {
+// 			clearInterval(song.durationInterval);
+// 		}
+// 		else {
+// 			song.timeRemaining -= 1;
+// 		}
+// 	}, 1000);
+// }

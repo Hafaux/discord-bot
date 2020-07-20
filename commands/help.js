@@ -21,7 +21,7 @@ module.exports = {
 				})
 				.catch(error => {
 					console.error(`Couldn't send help DM to ${message.author.tag}.\n`, error);
-					message.reply('No te pude enviar DM. ¿Tienes DM deshabilitados?');
+					message.reply('couldn\'t DM you. Do you have DMs disabled?');
 				});
 		}
 		else {
@@ -29,7 +29,7 @@ module.exports = {
 			const command = commands.get(name) || commands.find(c => c.aliases && c.aliases.includes(name));
 
 			if (!command) {
-				return message.reply('comando inválida');
+				return message.reply('Invalid command.');
 			}
 
 			data.push(`**Name:** ${command.name}`);
