@@ -5,6 +5,6 @@ module.exports = {
 	usage: '',
 	aliases: ['owo', 'uwu'],
 	execute(message) {
-		message.channel.send('mew!!');
+		message.channel.send('mew!!!');
 	},
 };
