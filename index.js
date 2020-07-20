@@ -8,8 +8,6 @@ client.commands = new Discord.Collection();
 
 const cooldowns = new Discord.Collection();
 
-const queue = new Map();
-
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
@@ -22,7 +20,7 @@ client.once('ready', () => {
 });
 
 client.on('message', async message => {
-	if (!message.content.startsWith(prefix) || message.author.bot) return;
+	if (!message.content.toLowerCase().startsWith(prefix) || message.author.bot) return;
 
 	const args = message.content.slice(prefix.length).split(/ +/);
 	const commandName = args.shift().toLowerCase();
@@ -60,7 +58,7 @@ client.on('message', async message => {
 	}
 
 	try {
-		command.execute(message, args, queue);
+		command.execute(message, args);
 	}
 	catch (error) {
 		console.error(error);

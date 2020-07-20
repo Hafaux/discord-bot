@@ -1,22 +1,25 @@
-const { MessageEmbed } = require('discord.js');
+const { MessageEmbed, Collection } = require('discord.js');
 
 const ytdl = require('ytdl-core-discord');
 
 const yts = require('yt-search');
 
+const queue = new Collection();
+
 module.exports = {
 	name: 'song',
 	description: 'Play music from YouTube.',
 	args: true,
-	usage: 'play [song name] | skip | stop | queue | remove',
-	aliases: ['music', 'youtube'],
-	async execute(message, args, queue) {
+	usage: 'play/p [song name] | skip | stop | queue | remove/r | playing/np',
+	aliases: ['s', 'music', 'youtube'],
+	async execute(message, args) {
 		const serverQueue = queue.get(message.guild.id);
 		const command = args.shift();
 
 		switch (command) {
+		case 'p':
 		case 'play':
-			play(message, serverQueue, queue, args.join(' '));
+			play(message, serverQueue, args.join(' '));
 			break;
 		case 'skip':
 			skip(message, serverQueue);
@@ -27,14 +30,19 @@ module.exports = {
 		case 'queue':
 			listQueuedSongs(message, serverQueue);
 			break;
+		case 'r':
 		case 'remove':
 			removeSong(message, serverQueue, args);
+			break;
+		case 'np':
+		case 'playing':
+			nowPlaying(message, serverQueue);
 			break;
 		}
 	},
 };
 
-async function play(message, serverQueue, queue, songQuery) {
+async function play(message, serverQueue, songQuery) {
 	const voiceChannel = message.member.voice.channel;
 
 	if (!voiceChannel) {
@@ -111,7 +119,7 @@ async function play(message, serverQueue, queue, songQuery) {
 			.setURL(song.url)
 			.addFields(
 				{ name: 'Duration', value: song.length, inline: true },
-				{ name: 'Estimated time until playing', value: timeFormat(durationLeft), inline: true },
+				{ name: 'Estimated time until playing', value: formatTime(durationLeft), inline: true },
 				{ name: 'Position in queue', value: serverQueue.songs.length - 1 },
 			)
 			.setThumbnail(song.thumbnail);
@@ -120,7 +128,7 @@ async function play(message, serverQueue, queue, songQuery) {
 	}
 }
 
-async function playSong(guild, song, queue) {
+async function playSong(guild, song) {
 	const serverQueue = queue.get(guild.id);
 
 	if (!song) {
@@ -162,7 +170,6 @@ async function playSong(guild, song, queue) {
 		.setURL(song.url)
 		.addFields(
 			{ name: 'Duration', value: song.length, inline: true },
-			{ name: '\u200B', value: '\u200B', inline: true },
 			{ name: 'Channel', value: song.author, inline: true },
 		)
 		.setThumbnail(song.thumbnail);
@@ -203,7 +210,7 @@ function listQueuedSongs(message, serverQueue) {
 			songsString += `**${index}.** [${song.title}](${song.url}) - Requested by: \`${song.requester}\`\n`;
 		});
 
-		const durationString = timeFormat(totalDuration);
+		const durationString = formatTime(totalDuration);
 
 		const embed = new MessageEmbed()
 			.setColor('#0099ff')
@@ -212,18 +219,11 @@ function listQueuedSongs(message, serverQueue) {
 			.setFooter(`Total duration: ${durationString}`);
 		if (songsString) embed.addField('**Up Next:**', songsString);
 
-		// let data = 'Now playing';
-
-		// serverQueue.songs.forEach((song, index) => {
-		// 	data += index ? index : '';
-		// 	data += ` - **${song.title}**\n`;
-		// });
-
 		message.channel.send(embed);
 	}
 }
 
-function timeFormat(duration) {
+function formatTime(duration) {
 	const hrs = ~~(duration / 3600);
 	const mins = ~~((duration % 3600) / 60);
 	const secs = ~~duration % 60;
@@ -246,24 +246,46 @@ function removeSong(message, serverQueue, args) {
 		);
 	}
 
-	if (serverQueue && serverQueue.songs) {
-		const index = parseInt(args);
-
-		if (isNaN(index) || index <= 0 || index > serverQueue.songs.length) {
-			return message.channel.send(
-				'Enter a valid song number to remove.',
-			);
-		}
-		else {
-			const removedSong = serverQueue.songs.splice(index, 1);
-			return message.channel.send(
-				`Removed **${removedSong.title}**`,
-			);
-		}
-	}
-	else {
+	if (!serverQueue || !serverQueue.songs) {
 		return message.channel.send(
 			'No songs to remove.',
 		);
 	}
+
+	const index = parseInt(args);
+
+	if (isNaN(index) || index <= 0 || index > serverQueue.songs.length) {
+		return message.channel.send(
+			'Enter a valid song number to remove.',
+		);
+	}
+	else {
+		const removedSong = serverQueue.songs.splice(index, 1);
+		return message.channel.send(
+			`Removed **${removedSong.title}**`,
+		);
+	}
+}
+
+function nowPlaying(message, serverQueue) {
+	if (!serverQueue || !serverQueue.songs) {
+		return message.channel.send(
+			'No songs currently playing.',
+		);
+	}
+
+	const song = serverQueue.songs[0];
+	const embed = new MessageEmbed()
+		.setColor('#29B464')
+		.setAuthor('Now Playing', song.requesterAvatar)
+		.setTitle(song.title)
+		.setURL(song.url)
+		.addFields(
+			{ name: 'Time', value: `${formatTime(song.seconds)} / ${song.length}`, inline: true },
+			{ name: 'Channel', value: `${song.author}`, inline: true },
+		)
+		.setFooter(`Requested by: ${song.requester}`, song.requesterAvatar)
+		.setThumbnail(song.thumbnail);
+
+	message.channel.send(embed);
 }
