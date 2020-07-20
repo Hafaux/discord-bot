@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@discordjs/opus": "^0.3.2",
+    "@keyv/sqlite": "^2.0.2",
     "bufferutil": "^4.0.1",
     "canvas": "^2.6.1",
     "discord.js": "^12.2.0",
@@ -20,6 +21,7 @@
     "ffmpeg": "0.0.4",
     "ffmpeg-static": "^4.2.5",
     "google-images": "^2.1.0",
+    "keyv": "^4.0.1",
     "querystring": "^0.2.0",
     "r2": "^2.0.1",
     "snoowrap": "^1.21.0",
