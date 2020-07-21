@@ -28,7 +28,7 @@ module.exports = {
 			stop(message, serverQueue);
 			break;
 		case 'queue':
-			listQueuedSongs(message, serverQueue);
+			listQueuedSongs(message, serverQueue, args);
 			break;
 		case 'r':
 		case 'remove':
@@ -143,7 +143,7 @@ async function playSong(guild, song, songStart = '0s') {
 		.play(await ytdl(song.url, {
 			filter: 'audioonly',
 			highWaterMark: 1 << 25,
-			begin: songStart
+			begin: songStart,
 		}), { type: 'opus' })
 		.on('finish', () => {
 			// if (!song.durationInterval) return
@@ -186,7 +186,7 @@ function skip(message, serverQueue) {
 			'You have to be in a voice channel to skip the current song.',
 		);
 	}
-	if (!serverQueue) {
+	if (!serverQueue || !serverQueue.connection) {
 		return message.channel.send('No song to skip.');
 	}
 	serverQueue.connection.dispatcher.end();
@@ -202,15 +202,22 @@ function stop(message, serverQueue) {
 	serverQueue.connection.dispatcher.end();
 }
 
-function listQueuedSongs(message, serverQueue) {
+function listQueuedSongs(message, serverQueue, args = [ 1 ]) {
 	if (serverQueue && serverQueue.songs) {
+		const songsPerPage = 11;
+		const pageIndex = parseInt(args[0]) || 1;
+		const totalPages = Math.ceil(serverQueue.songs.length / songsPerPage);
+		const pageSongStart = pageIndex * songsPerPage - songsPerPage;
+		const pageSongEnd = pageIndex * songsPerPage;
 
-		let songsString = '';
+		if (isNaN(pageIndex) || pageIndex <= 0 || pageIndex > totalPages) {
+			return message.channel.send('Enter a valid page number');
+		}
+
 		let totalDuration = 0;
-		serverQueue.songs.forEach((song, index) => {
+
+		serverQueue.songs.forEach(song => {
 			totalDuration += song.length;
-			if (index === 0 || index > 10) return;
-			songsString += `**${index}.** [${song.title}](${song.url}) - Requested by: \`${song.requester}\`\n`;
 		});
 
 		const durationString = formatTime(totalDuration);
@@ -218,12 +225,23 @@ function listQueuedSongs(message, serverQueue) {
 		const embed = new MessageEmbed()
 			.setColor('#0099ff')
 			.setTitle(`Queue for ${serverQueue.voiceChannel.name}`)
-			.addField('**Now Playing:**', `[${serverQueue.songs[0].title}](${serverQueue.songs[0].url}) - Requested by: \`${serverQueue.songs[0].requester}\``)
-			.setFooter(`Total duration: ${durationString}`);
-		if (songsString) embed.addField('**Up Next:**', songsString);
+			.addField('**Now Playing:**', formatSong(serverQueue.songs[0]))
+			.setFooter(`Page ${pageIndex}/${totalPages} | Total duration: ${durationString}`);
+
+		const pageSongs = serverQueue.songs.slice(pageSongStart, pageSongEnd);
+
+		pageSongs.forEach((song, index) => {
+			const songIndex = index + pageSongStart;
+			if (songIndex === 0) return;
+			embed.addField(songIndex % 10 === 1 ? '**Up Next:**' : '\u200B', `**${songIndex}.** ${formatSong(song, songIndex)}`);
+		});
 
 		message.channel.send(embed);
 	}
+}
+
+function formatSong(song) {
+	return `[${song.title}](${song.url}) \`${formatTime(song.length)}\` - Requested by: \`${song.requester}\``;
 }
 
 function formatTime(duration) {
@@ -278,7 +296,7 @@ function nowPlaying(message, serverQueue) {
 	}
 
 	const song = serverQueue.songs[0];
-	let timeline = timelineASCII(song);
+	const timeline = timelineASCII(song);
 
 	const embed = new MessageEmbed()
 		.setColor('#29B464')
@@ -287,7 +305,7 @@ function nowPlaying(message, serverQueue) {
 		.setURL(song.url)
 		.setDescription(song.description)
 		.addFields(
-			{ name: '\u200B', value: timeline, inline: true },
+			{ name: 'Time', value: timeline, inline: true },
 			{ name: 'Channel', value: `${song.author}`, inline: true },
 		)
 		.setFooter(`Requested by: ${song.requester}`, song.requesterAvatar)
@@ -297,7 +315,7 @@ function nowPlaying(message, serverQueue) {
 }
 
 function timelineASCII(song) {
-	let timeline = '────────────────────';
+	let timeline = '───────────────';
 	const timeRatio = ~~(song.currentTime * timeline.length / song.length);
 	timeline = timeline.substr(0, timeRatio) + '|' + timeline.substr(timeRatio + 1);
 	return `${formatTime(song.currentTime)} ${timeline} ${formatTime(song.length)}`;
