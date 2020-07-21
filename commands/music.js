@@ -281,7 +281,7 @@ function removeSong(message, serverQueue, args) {
 		);
 	}
 	else {
-		const removedSong = serverQueue.songs.splice(index, 1);
+		const removedSong = serverQueue.songs.splice(index, 1)[0];
 		return message.channel.send(
 			`Removed **${removedSong.title}**`,
 		);
