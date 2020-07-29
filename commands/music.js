@@ -19,7 +19,7 @@ module.exports = {
 		switch (command) {
 		case 'p':
 		case 'play':
-			play(message, serverQueue, args.join(' '));
+			play(message, serverQueue, args);
 			break;
 		case 'skip':
 			skip(message, serverQueue);
@@ -38,12 +38,16 @@ module.exports = {
 		case 'playing':
 			nowPlaying(message, serverQueue);
 			break;
+		case 'search':
+			searchSongs(message, serverQueue, args);
+			break;
 		}
 	},
 };
 
-async function play(message, serverQueue, songQuery) {
+async function play(message, serverQueue, args) {
 	const voiceChannel = message.member.voice.channel;
+	const songQuery = args.join(' ');
 
 	if (!voiceChannel) {
 		return message.channel.send(
@@ -238,6 +242,12 @@ function listQueuedSongs(message, serverQueue, args = [ 1 ]) {
 
 		message.channel.send(embed);
 	}
+}
+
+async function searchSongs(message, serverQueue, args) {
+	const songQuery = args.join(' ');
+	const queryResolve = await yts(songQuery);
+	console.log(queryResolve.videos);
 }
 
 function formatSong(song) {
