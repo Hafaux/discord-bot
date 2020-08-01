@@ -21,11 +21,15 @@ module.exports = {
 		ctx.closePath();
 		// Clip off the region you drew on
 		ctx.clip();
+		const imgAttachment = message.attachments.first();
+		const toSpank = message.mentions.users.first() ||
+			(imgAttachment ? imgAttachment.url : message.author);
 
-		const toSpank = message.mentions.users.first() || message.author;
-		const avatar = await loadImage(toSpank.displayAvatarURL({ format: 'png' }));
-		ctx.drawImage(avatar, 684, 396, 255, 255);
-		const attachment = new MessageAttachment(canvas.toBuffer(), 'help.png');
-		message.channel.send(attachment);
+		let img;
+		if (imgAttachment) img = await loadImage(toSpank);
+		else img = await loadImage(toSpank.displayAvatarURL({ format: 'png' }));
+		ctx.drawImage(img, 684, 396, 255, 255);
+		const spankAttachment = new MessageAttachment(canvas.toBuffer(), 'help.png');
+		message.channel.send(spankAttachment);
 	},
 };
