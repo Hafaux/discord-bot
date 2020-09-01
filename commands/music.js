@@ -42,7 +42,7 @@ module.exports = {
 			searchSongs(message, serverQueue, args);
 			break;
 		}
-	},
+	}
 };
 
 async function play(message, serverQueue, args) {
@@ -51,20 +51,20 @@ async function play(message, serverQueue, args) {
 
 	if (!voiceChannel) {
 		return message.channel.send(
-			'You need to be in a voice channel to play music.',
+			'You need to be in a voice channel to play music.'
 		);
 	}
 
 	if (!songQuery) {
 		return message.channel.send(
-			'what song tho',
+			'what song tho'
 		);
 	}
 
 	const permissions = voiceChannel.permissionsFor(message.client.user);
 	if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
 		return message.channel.send(
-			'Permission denied.',
+			'Permission denied.'
 		);
 	}
 
@@ -81,7 +81,7 @@ async function play(message, serverQueue, args) {
 		currentTime: 0,
 		author: video.author.name,
 		requester: message.author.username,
-		requesterAvatar: message.author.displayAvatarURL({ format: 'png' }),
+		requesterAvatar: message.author.displayAvatarURL({ format: 'png' })
 	};
 
 	if (!serverQueue) {
@@ -91,7 +91,7 @@ async function play(message, serverQueue, args) {
 			connection: null,
 			songs: [],
 			volume: 5,
-			playing: true,
+			playing: true
 		};
 
 		queue.set(message.guild.id, queueContruct);
@@ -126,7 +126,7 @@ async function play(message, serverQueue, args) {
 			.addFields(
 				{ name: 'Duration', value: formatTime(song.length), inline: true },
 				{ name: 'Estimated time until playing', value: formatTime(durationLeft), inline: true },
-				{ name: 'Position in queue', value: serverQueue.songs.length - 1 },
+				{ name: 'Position in queue', value: serverQueue.songs.length - 1 }
 			)
 			.setThumbnail(song.thumbnail);
 
@@ -147,7 +147,7 @@ async function playSong(guild, song, songStart = '0s') {
 		.play(await ytdl(song.url, {
 			filter: 'audioonly',
 			highWaterMark: 1 << 25,
-			begin: songStart,
+			begin: songStart
 		}), { type: 'opus' })
 		.on('finish', () => {
 			// if (!song.durationInterval) return
@@ -177,7 +177,7 @@ async function playSong(guild, song, songStart = '0s') {
 		.setURL(song.url)
 		.addFields(
 			{ name: 'Duration', value: formatTime(song.length), inline: true },
-			{ name: 'Channel', value: song.author, inline: true },
+			{ name: 'Channel', value: song.author, inline: true }
 		)
 		.setThumbnail(song.thumbnail);
 
@@ -187,7 +187,7 @@ async function playSong(guild, song, songStart = '0s') {
 function skip(message, serverQueue) {
 	if (!message.member.voice.channel) {
 		return message.channel.send(
-			'You have to be in a voice channel to skip the current song.',
+			'You have to be in a voice channel to skip the current song.'
 		);
 	}
 	if (!serverQueue || !serverQueue.connection) {
@@ -199,7 +199,7 @@ function skip(message, serverQueue) {
 function stop(message, serverQueue) {
 	if (!message.member.voice.channel) {
 		return message.channel.send(
-			'You have to be in a voice channel to stop the music.',
+			'You have to be in a voice channel to stop the music.'
 		);
 	}
 	serverQueue.songs = [];
@@ -273,13 +273,13 @@ function formatTime(duration) {
 function removeSong(message, serverQueue, args) {
 	if (!message.member.voice.channel) {
 		return message.channel.send(
-			'You have to be in a voice channel to remove a song from the queue.',
+			'You have to be in a voice channel to remove a song from the queue.'
 		);
 	}
 
 	if (!serverQueue || !serverQueue.songs) {
 		return message.channel.send(
-			'No songs to remove.',
+			'No songs to remove.'
 		);
 	}
 
@@ -287,13 +287,13 @@ function removeSong(message, serverQueue, args) {
 
 	if (isNaN(index) || index <= 0 || index > serverQueue.songs.length) {
 		return message.channel.send(
-			'Enter a valid song number to remove.',
+			'Enter a valid song number to remove.'
 		);
 	}
 	else {
 		const removedSong = serverQueue.songs.splice(index, 1)[0];
 		return message.channel.send(
-			`Removed **${removedSong.title}**`,
+			`Removed **${removedSong.title}**`
 		);
 	}
 }
@@ -301,7 +301,7 @@ function removeSong(message, serverQueue, args) {
 function nowPlaying(message, serverQueue) {
 	if (!serverQueue || !serverQueue.songs) {
 		return message.channel.send(
-			'No songs currently playing.',
+			'No songs currently playing.'
 		);
 	}
 
@@ -316,7 +316,7 @@ function nowPlaying(message, serverQueue) {
 		.setDescription(song.description)
 		.addFields(
 			{ name: 'Time', value: timeline, inline: true },
-			{ name: 'Channel', value: `${song.author}`, inline: true },
+			{ name: 'Channel', value: `${song.author}`, inline: true }
 		)
 		.setFooter(`Requested by: ${song.requester}`, song.requesterAvatar)
 		.setThumbnail(song.thumbnail);
